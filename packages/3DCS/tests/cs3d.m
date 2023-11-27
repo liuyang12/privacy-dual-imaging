@@ -32,7 +32,17 @@ switch lower(params.cs3dmethod) % [params] csmethod
                    %       volume
         % apply 2D-CS method to each frame
         for iframe = 1:params.nframe
-            vout(:,iframe) = cs(sensmat(:,:,iframe),meas(:,iframe),params);
+            if isfield(params, 'x0v')
+                params.x0 = params.x0v(:, iframe);
+            end
+            if isfield(params, 'rhos')
+                params.rho = params.rhos(iframe);
+            end
+            if ndims(sensmat) <= 2 % same sensing matrix for all measurements
+                vout(:,iframe) = cs(sensmat,meas(:,iframe),params);
+            else
+                vout(:,iframe) = cs(sensmat(:,:,iframe),meas(:,iframe),params);
+            end
         end
         % [end] CS2D
         %
@@ -132,6 +142,29 @@ switch lower(params.cs3dmethod) % [params] csmethod
         % [end] GAP_TV3D
         % 
         % 
+    case 'pnp_admm3d' % [3.1] Plug-and-play (PnP) algorithms based on  
+                      %       alternation direction method of multipliers 
+                      %       (ADMM), where various (deep) video denoisers are
+                      %       used as the PnP regularizer.
+        % [3.1.1] parameter configuration for PnP_ADMM3D
+        
+        % [3.1.2] apply PnP_ADMM3D algorithm
+        vout = pnp_admm3d(sensmat, meas, params);
+        % [end] PnP_ADMM3D
+        %
+        %
+    case 'pnp_qcs3d' % [3.2] Plug-and-play algorithms based on 
+                      %      Basis Pursuit DeQuantizer of mement p (BPDQ_p)
+                      %      for quantized compressive sensing (QCS), where 
+                      %      various (deep) video denoisers are used as 
+                      %      the PnP regularizer.
+        % [3.2.1] parameter configuration for PnP_QCS3D
+        
+        % [3.2.2] apply PnP_QCS3D algorithm
+        vout = pnp_qcs3d(sensmat, meas, params);
+        % [end] PnP_QCS3D
+        %
+        %
     otherwise
         error('Unsupported three dimensional compressive sensing algorithm %s.\n',params.cs3dmethod);
 end

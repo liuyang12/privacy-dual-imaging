@@ -27,7 +27,7 @@ if isfield(sparams,'SYMMETRY'),             SYMMETRY = sparams.SYMMETRY;       e
 if isfield(sparams,'NUMPHSHIFT'),         NUMPHSHIFT = sparams.NUMPHSHIFT;     end
 if isfield(sparams,'QUANTIZATION'),     QUANTIZATION = sparams.QUANTIZATION;   end
 if isfield(sparams,'QUANT_STEPS'),       QUANT_STEPS = sparams.QUANT_STEPS;    end
-if isfield(sparams,'dither_num'),         dither_num = sparams.dither_num;    end
+if isfield(sparams,'dither_num'),         dither_num = sparams.dither_num;     end
 
 % [0.3] pre-calculation
 switch lower(transformshape)
@@ -165,7 +165,7 @@ switch lower(sparams.sensmethod)
         % sensmat = Had(rowset,:);
         csdata.sensmtx = Had;
         csdata.sensind = rowset;
-        csdata.Rad    = Rad;
+        csdata.Rad     = Rad;
     case 'video' % generate sensing matrix from a pre-defined video sequence
         vid = VideoReader(sparams.vpath);
         nframe = vid.NumFrames; % number of frames in the video
@@ -185,20 +185,26 @@ switch lower(sparams.sensmethod)
             img_gray = im2double(rgb2gray(img_color));
             img = img_gray(floor((h-ch)/2)+(1:ch), floor((w-cw)/2)+(1:cw));
             if isfield(sparams,'SIMREALSIZE') && sparams.SIMREALSIZE
-                meas_nonoise(j,:) = img(:)'*samp_rzvec;
+                meas_nonoise(j,:) = (img(:)/(ch*cw)*rows*cols)'*samp_rzvec;
             end
             % img = imresize(img, [rows, cols], 'bilinear'); % [OPT#1] image resizing
             img = imbinning(img, [ch/rows cw/cols]); % [OPT#2] pixel binning
             % img = round(img*255)/255;
-            if mean(img(:)/(ch*cw)*rows*cols) > 0.1 % omit (literally) blank frames
+            if mean(img(:)) > 0.06 % omit (literally) blank frames
                 sensmat(j, :) = img(:);    
                 j = j+1;
             else
-                fprintf('skipped frame #%d, mean %.4f.\n',iframe, mean(img(:)/(ch*cw)*rows*cols));
+                fprintf('skipped frame #%d, mean %.4f.\n',iframe, mean(img(:)));
             end
             iframe = iframe + sparams.step;
         end
-        iframe
+        sparams.endframe = iframe - sparams.step; % exact end frame number
+        sparams.rowmax = max(mean(sensmat,2));
+        fprintf('Overall row maximum %.3f; end frame #%d.\n', sparams.rowmax , sparams.endframe);
+        if sparams.QUANTIZATION
+            sparams.QUANT_STEPS = round(sparams.QUANT_STEPS * sparams.rowmax);
+        end
+        clear vid
         
     otherwise
         error('unsupported sensing method %s.\n', sparams.sensmethod);
@@ -320,8 +326,7 @@ if QUANTIZATION
     else % Gaussian sensing matrix
         
     end
-    
-    VMAX
+    fprintf('Maximum measurement value %.2f.\n', VMAX);
 else
     if ~ (isfield(sparams,'SIMREALSIZE') && sparams.SIMREALSIZE)
         meas_nonoise = sensmat*reshape(samp, [nyqnum chnum]);
@@ -338,7 +343,11 @@ end
 csdata.samp    = samp;
 csdata.sensmat = sensmat;
 csdata.meas    = meas;
-save(sprintf('%s/%s%d_%s_samprate%.2f_snr%ddb.mat',simdatadir,sparams.sampname,rows,sparams.sensmethod,sparams.samprate,sparams.noisesnr),'csdata','-v7.3');
+if strcmpi(sparams.sensmethod, 'video') && isfield(sparams, 'filmname')
+    save(sprintf('%s/%s%d_%s_%s_samprate%.2f_snr%ddb.mat',simdatadir,sparams.sampname,rows,sparams.sensmethod,sparams.filmname,sparams.samprate,sparams.noisesnr),'csdata','-v7.3');
+else
+    save(sprintf('%s/%s%d_%s_samprate%.2f_snr%ddb.mat',simdatadir,sparams.sampname,rows,sparams.sensmethod,sparams.samprate,sparams.noisesnr),'csdata','-v7.3');
+end
 % [1.4] save sparams as simulation preferences
 save(sprintf('%s/sim_prefs.mat',datadir),'sparams');
 

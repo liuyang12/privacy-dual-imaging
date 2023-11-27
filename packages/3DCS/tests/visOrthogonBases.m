@@ -7,6 +7,11 @@
 % [1] read the sensing matrix
 % sensmat
 
+ordermtx = reshape(1:8*8,[8,8]);
+if strcmp(sparams.sensmethod, 'fourier')
+    ordermtx = fftshift(ordermtx);
+end
+
 basisRange = [8 8]; % [nrows ncols] to be displayed
 rRange = basisRange(1);
 cRange = basisRange(2);
@@ -17,7 +22,8 @@ hplot = tight_subplot(rRange,cRange,[0.01 0.01], [0.01, 0.01], [0.01 0.01]);
 
 for irow = 1:rRange
     for icol = 1:cRange
-        vect = sensmat((irow-1)*cols+icol,:);
+        idx = ordermtx(icol,irow);
+        vect = sensmat(idx,:);
         if isreal(sensmat) % real-valued sensing matrix [-1,1]
             if min(vect) >= 0 % [0,1]
                 vectnorm = vect;

@@ -22,11 +22,39 @@ function [ sig_out ] = cs( sensmat,meas,params )
 % [1] basic parameters
 opts = []; % options for various algorithms
 
-% differential sensing matrix (row subtraction) and the corresponding
-% measurements
+% [1.]  precondition the linear inverse problem
+% [1.1] differential sensing matrix (row subtraction) and the corresponding
+%       measurements as preconditioner
 if isfield(params, 'DIFFSENS') && params.DIFFSENS
     sensmat = diff(sensmat, 1);
     meas    = diff(meas, 1);
+end
+
+% [1.2] eigendecomposition as preconditioner for ill-conditioned linear 
+%       inverse problems
+if isfield(params, 'use_eigendecomp') && params.use_eigendecomp
+    if isfield(params, 'condnumb_upper')
+        condnumb_upper = params.condnumb_upper;
+    else
+        condnumb_upper = 1e3;
+    end
+    % [.1] eigen decompose A*A^T
+    AAT = sensmat*sensmat';
+    [V, D] = eig(AAT);
+    % [.2] descending eigenvalues and eliminate small ones and
+    %      corresponding eigenvectors
+    [d, I] = sort(diag(D), 'descend'); % eigenvalues in a descending manner
+    EIGEPS = d(1)/condnumb_upper^2; % cond(A) = sqrt(d(1)/d(end))
+    ind = I(d>=EIGEPS); % eliminate small eigenvalues to match desired condition number
+    Vd = V(:, ind);
+    % [.3] rewrite the sensing matrix and linear measurements
+    sensmat = Vd'*sensmat;
+    meas    = Vd'*meas;
+
+    % i=50;fig=figure;subplot(121);imshow(imresize(reshape(sensmat_org(i,:),[32,32]), 16, 'nearest')); title(sprintf('Before truncation (Frame #%d)',i)); subplot(122); imshow(imresize(reshape(imnorm(sensmat(i,:)),[32,32]), 16, 'nearest')); title('After truncation (normalized)');
+    % saveas(fig,sprintf('savedfig_touch/vis_proj_regularization_tom_and_jerry_frame%03d.svg',i));
+    
+    fprintf('Condition number of sensing matrix after eigendecomposition: %.1f, smallest eigenvalue: %.2e.\n', cond(double(sensmat)), d(I(ind(end))));
 end
 
 % [2] apply various compressive sensing algorithms
@@ -286,7 +314,7 @@ switch lower(params.csmethod) % [params] csmethod
         nch = size(meas, 2); % number of measurement channels
         % channel-wise reconstruction
         for ich = 1:nch
-            sig_out(:,ich) = 1/255*DAMP(255*meas(:,ich), maxiter, height, width, denoiser, sensmat);
+            sig_out(:,ich) = 1/255*reshape(DAMP(255*meas(:,ich), maxiter, height, width, denoiser, sensmat), [],1);
             % sig_out(:,ich) = DAMP(meas(:,ich), maxiter, height, width, denoiser, sensmat);
         end
         % [end] DAMP

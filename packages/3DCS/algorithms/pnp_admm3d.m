@@ -1,4 +1,4 @@
-function [ x, psnrall ] = pnp_admm( A, y, opt )
+function [ x, psnrall ] = pnp_admm3d( A, y, opt )
 %PNP_ADMM Plug-and-play (PnP) algorithm(s) based on alternating direction
 %method of multipliers (ADMM) for compressive image reconstruction. 
 % TODO: supposed to work with multi-channel measurements y's (and sensing
@@ -53,7 +53,7 @@ nosestim = true;    % enable noise estimation (if possible)
 tvweight = 0.07;    % weight for TV denoising
 tviter   = 5;       % number of iteration for TV denoising
 flag_iqa = true;    % flag of showing image quality assessments
-ffdnetnorm_init = true;  % use normalized image as input for initialization
+ffdnetvnorm_init = true;  % use normalized image as input for initialization
                           %  (with the first 10 iterations)
 bm3d_profile = 'np';      % quailty & complexity trade-off profile selection 
                           %  ('np' for normal profile, 'lc' for low-complexity)
@@ -69,18 +69,26 @@ if isfield(opt,'tviter'),     tviter = opt.tviter;   end
 if isfield(opt,'nosestim'), nosestim = opt.nosestim; end
 if isfield(opt,'sigma'),       sigma = opt.sigma;    end
 if isfield(opt,'flag_iqa'), flag_iqa = opt.flag_iqa; end
-if isfield(opt,'ffdnetnorm_init'), ffdnetnorm_init = opt.ffdnetnorm_init; end
+if isfield(opt,'ffdnetvnorm_init'), ffdnetvnorm_init = opt.ffdnetvnorm_init; end
 if isfield(opt,'bm3d_profile'), bm3d_profile = opt.bm3d_profile; end
 if isfield(opt,'orthogonal_basis'), orthogonal_basis = opt.orthogonal_basis; end
 
+if isfield(opt, 'nframe'), F = opt.nframe; else F = size(y,2); end
+if ndims(A) <= 2, SAME_SENSING_MATRIX=true; else SAME_SENSING_MATRIX=false; end
 if ~exist('x0','var') || isempty(x0) % start point
-    x0 = A'*y; 
+    for i = 1:F
+        if SAME_SENSING_MATRIX % same sensing matrix for all measurements
+            x0(:,i) = A'*y(:,i); 
+        else
+            x0(:,i) = A(:,:,i)'*y(:,i); 
+        end
+    end
 end
 
-if  isfield(opt,'ffdnetnorm') && ffdnetnorm_init % 
+if  isfield(opt,'ffdnetvnorm') && ffdnetvnorm_init % 
     sigma = [50/255 sigma];
     maxiter = [10 maxiter];
-    ffdnetnorm = opt.ffdnetnorm;
+    ffdnetvnorm = opt.ffdnetvnorm;
 end
 
 % size of the image or the image sequence (used when resizing)
@@ -100,11 +108,24 @@ end
 
 % pre-calculation
 if orthogonal_basis % [orthogonal basis] A*A' diagonal
-    d = diag(A*A');
+    if SAME_SENSING_MATRIX
+        d = diag(A*A');
+    else
+        for i = 1:F
+            d(:,i) = diag(A(:,:,i)*A(:,:,i)');
+        end
+    end
 else % [general basis]
     I = eye(N); % identity matrix (N-by-N)
-    invmat = (rho*I+A'*A)\I; % (rho*I+A'*A)^{-1}
-    x_rho = invmat*A'*y; % (rho*I+A'*A)^{-1}*A'*b
+    if SAME_SENSING_MATRIX
+        invmat = (rho*I+A'*A)\I; % (rho*I+A'*A)^{-1}
+        x_rho = invmat*A'*y; % (rho*I+A'*A)^{-1}*A'*b
+    else
+        for i = 1:F
+            invmat(:,:,i) = (rho*I+A(:,:,i)'*A(:,:,i))\I; % (rho*I+A'*A)^{-1}
+            x_rho(:,i) = invmat(:,:,i)*A(:,:,i)'*y(:,i); % (rho*I+A'*A)^{-1}*A'*b
+        end
+    end
 end
 
 u  = zeros(size(x0),'like',x0); % residual
@@ -119,9 +140,21 @@ for isig = 1:length(maxiter) % extension for a series of noise levels
     for iter = 1:maxiter(isig)
         % [1.1] Euclidean projection
         if orthogonal_basis % [orthogonal basis] A*A' diagonal
-             x = (z-u) + A'*( (y-A*(z-u))./(rho+d) ); % element-wise
+            if SAME_SENSING_MATRIX
+                x = (z-u) + A'*( (y-A*(z-u))./(rho+d) ); % element-wise
+            else
+                for i = 1:F
+                    x(:,i) = (z(:,i)-u(:,i)) + A(:,:,i)'* ( (y(:,i)-A(:,:,i)*(z(:,i)-u(:,i)))./(rho+d(:,i)) );
+                end
+            end
         else % [general basis]
-            x = x_rho + rho*invmat*(z-u); % matrix product
+            if SAME_SENSING_MATRIX
+                x = x_rho + rho*invmat*(z-u); % matrix product
+            else
+                for i = 1:F
+                    x(:,i) = x_rho(:,i) + rho*invmat(:,:,i)*(z(:,i)-u(:,i));
+                end
+            end
         end
         xu_mat = reshape(x+u, imsize); % reshape to image format
         if ~isreal(xu_mat)
@@ -136,17 +169,43 @@ for isig = 1:length(maxiter) % extension for a series of noise levels
                 [~,z_mat] = BM3D(1,xu_mat*255,nsigma*255,bm3d_profile,0); % nsigma
             case 'cbm3d' % BM3D denoising
                 [~,z_mat] = CBM3D(1,xu_mat*255,nsigma*255,bm3d_profile,0); % nsigma
-            case 'wnnm' % WNNM image denoising (MATLAB-style matrix version)
-                z_mat = wnnm_imdenoise(xu_mat,[],opt); % opt.sigma
-            case 'ffdnet' % FFDNet image denoising (frame-wise)
-                if ffdnetnorm_init
+            % case 'wnnm' % WNNM image denoising (MATLAB-style matrix version)
+            %     z_mat = wnnm_imdenoise(xu_mat,[],opt); % opt.sigma
+            % case 'ffdnet' % FFDNet image denoising
+            %     if ffdnetnorm_init
+            %         if isig==1
+            %             opt.ffdnetnorm = true;
+            %         else
+            %             opt.ffdnetnorm = ffdnetnorm;
+            %         end
+            %     end
+            %     z_mat = ffdnet_imdenoise(xu_mat,[],opt); % opt.sigma
+                
+            case 'vbm3d' % VBM3D denoising
+                [~,z_mat] = VBM3D(xu_mat,nsigma,0,0);
+            case 'vbm4d' % VBM4D denoising
+                if nosestim % noise estimation enabled
+                    z_mat = vbm4d(xu_mat,-1,'lc',1,1,1,0); % -1 to enable noise estimation
+                else % noise estimation disabled
+                    z_mat = vbm4d(xu_mat,nsigma,'lc',1,1,1,0); % sigma as estimated noise level
+                end
+            case 'bm4d' % BM4D denoising
+                if nosestim % noise estimation enabled
+                    z_mat = bm4d(xu_mat,'Gauss',0,'lc',1,0); % 0 to enable noise estimation
+                else % noise estimation disabled
+                    z_mat = bm4d(xu_mat,'Gauss',nsigma,'lc',1,0); % sigma as estimated noise level
+                end
+            case 'wnnm' % WNNM video denoising 
+                z_mat = wnnm_vdenoise(xu_mat,[],opt); % opt.sigma as estimated noise level
+            case 'ffdnet' % FFDNet video denoising (frame-wise)
+                if ffdnetvnorm_init
                     if isig==1
-                        opt.ffdnetnorm = true;
+                        opt.ffdnetvnorm = true;
                     else
-                        opt.ffdnetnorm = ffdnetnorm;
+                        opt.ffdnetvnorm = ffdnetvnorm;
                     end
                 end
-                z_mat = ffdnet_imdenoise(xu_mat,[],opt); % opt.sigma
+                z_mat = ffdnet_vdenoise(xu_mat,[],opt); % opt.sigma
             otherwise
                 error('Unsupported denoiser %s!',denoiser);
         end

@@ -62,7 +62,7 @@ nosestim = true;    % enable noise estimation (if possible)
 tvweight = 0.07;    % weight for TV denoising
 tviter   = 5;       % number of iteration for TV denoising
 flag_iqa = true;    % flag of showing image quality assessments
-ffdnetvnorm_init = true;  % use normalized image as input for initialization
+ffdnetnorm_init = true;  % use normalized image as input for initialization
                           %  (with the first 10 iterations)
 bm3d_profile = 'np';      % quailty & complexity trade-off profile selection 
                           %  ('np' for normal profile, 'lc' for low-complexity)
@@ -80,7 +80,7 @@ if isfield(opt,'tviter'),       tviter = opt.tviter;   end
 if isfield(opt,'nosestim'),   nosestim = opt.nosestim; end
 if isfield(opt,'sigma'),         sigma = opt.sigma;    end
 if isfield(opt,'flag_iqa'),   flag_iqa = opt.flag_iqa; end
-if isfield(opt,'ffdnetvnorm_init'), ffdnetvnorm_init = opt.ffdnetvnorm_init; end
+if isfield(opt,'ffdnetnorm_init'), ffdnetnorm_init = opt.ffdnetnorm_init; end
 if isfield(opt,'bm3d_profile'), bm3d_profile = opt.bm3d_profile; end
 if isfield(opt,'orthogonal_basis'), orthogonal_basis = opt.orthogonal_basis; end
 if isfield(opt,'p'),                  p = opt.p; end
@@ -90,10 +90,10 @@ if ~exist('x0','var') || isempty(x0) % start point
     x0 = A'*y; 
 end
 
-if  isfield(opt,'ffdnetvnorm') && ffdnetvnorm_init % 
+if  isfield(opt,'ffdnetnorm') && ffdnetnorm_init % 
     sigma = [50/255 sigma];
     maxiter = [10 maxiter];
-    ffdnetvnorm = opt.ffdnetvnorm;
+    ffdnetnorm = opt.ffdnetnorm;
 end
 
 % size of the image or the image sequence (used when resizing)
@@ -114,6 +114,7 @@ end
 % pre-calculation
 if orthogonal_basis % [orthogonal basis] A*A' diagonal
     d = diag(A*A');
+    % d = eig(A*A');
 else % [general basis]
     I = eye(N); % identity matrix (N-by-N)
     invmat = (rho*I+A'*A)\I; % (rho*I+A'*A)^{-1}
@@ -157,11 +158,11 @@ for isig = 1:length(maxiter) % extension for a series of noise levels
             case 'wnnm' % WNNM video denoising (MATLAB-style matrix version)
                 z_mat = wnnm_imdenoise(xu_mat,[],opt); % opt.sigma
             case 'ffdnet' % FFDNet video denoising (frame-wise)
-                if ffdnetvnorm_init
+                if ffdnetnorm_init
                     if isig==1
-                        opt.ffdnetvnorm = true;
+                        opt.ffdnetnorm = true;
                     else
-                        opt.ffdnetvnorm = ffdnetvnorm;
+                        opt.ffdnetnorm = ffdnetnorm;
                     end
                 end
                 z_mat = ffdnet_imdenoise(xu_mat,[],opt); % opt.sigma
