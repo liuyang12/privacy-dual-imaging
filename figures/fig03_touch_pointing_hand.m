@@ -1,6 +1,10 @@
 %FIG03_TOUCH_POINTING_HAND
 % Figure 3 | Imaging privacy threats revealing touch detection in front of 
 % the screen. Second row: Pointing hand.
+% 
+% Citation: Yang Liu, Gregory W. Wornell, William T. Freeman, Fredo Durand.
+% Imaging Privacy Threats from an Ambient Light Sensor. preprint
+% [submitted]. 2023.
 clear; clc;
 close all;
 % [0] environment configuration

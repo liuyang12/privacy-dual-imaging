@@ -1,16 +1,20 @@
-%SCREENCAMRECON Reconstruction of the Screen Camera. 
+%FIG05_FILM_SEQUENCE_TOUCH 
+% Figure 5: Hand interaction leakage while watching a natural video.
+% 
+% Citation: Yang Liu, Gregory W. Wornell, William T. Freeman, Fredo Durand.
+% Imaging Privacy Threats from an Ambient Light Sensor. preprint
+% [submitted]. 2023.
 clear; clc;
-% close all;
+close all;
 % [0] environment configuration
 addpath(genpath('../packages')); % packages
 addpath('../utils'); % utilities
 
-% rawdata_dir = '../../rawdata/'; % raw data directory
-rawdata_dir = '/proj/_docs/Dropbox (MIT)/proj/screencam/rawdata/'; % raw data directory
+rawdata_dir = '../rawdata/'; % raw data directory
 dataset_dir = '../dataset/'; % dataset directory
 results_dir = '../results/'; % results
 
-scfile      = [2070]; % scene file(s), average if multiple
+scfile      = [2050]; % scene file(s), average if multiple
 bgfile      = []; % background file(s), average if multiple
 
 % [1] parameters
@@ -37,7 +41,7 @@ nColor    = 1; % number of color channels in the measurements
 DIFFMEAS  = false; % differential measurement M=(1+M)/2-(1-M)/2
 HFLIP     = false; % horizontal flip
 UPSIDEDOWN = false; % upside down
-RERAWREAD  = true; % re-read the raw measurement data
+RERAWREAD  = false; % re-read the raw measurement data
 BRCORRFLAG = false; % brightness correction flag
 FIGFLAG    = false; % flag of plotting figure(s)
 ALSDATA    = true; % using the real ambient light sensor (ALS) data
@@ -296,8 +300,8 @@ para.cols = h; % [horizontal] width
 % load('../packages/data/sim/static/mit_logo_sim32_video_samprate8.00_snr30db.mat','csdata');
 % load('../packages/data/sim/static/hand_touch32_video_samprate8.00_snr30db.mat','csdata');
 
-% load('../packages/data/sim/static/hand_touch32_video_tom_and_jerry_samprate8.00_snr30db.mat','csdata');
-load('../packages/data/sim/static/hand_touch32_video_fpv_mountain_samprate8.00_snr30db.mat','csdata');
+load('../packages/data/sim/static/hand_touch32_video_tom_and_jerry_samprate8.00_snr30db.mat','csdata');
+% load('../packages/data/sim/static/hand_touch32_video_fpv_mountain_samprate8.00_snr30db.mat','csdata');
 
 % load(sprintf('%s/%s%d_samprate%.2f_snr%ddb.mat',simdatadir,...
 %     sparams.sampname,sparams.rows,sparams.samprate,sparams.noisesnr));

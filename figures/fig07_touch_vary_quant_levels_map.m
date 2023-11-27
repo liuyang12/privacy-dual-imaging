@@ -1,6 +1,10 @@
 %FIG07_TOUCH_VARY_QUANT_LEVELS_MAP
 % Figure 7 | The effect of reduced quantization levels of the ambient light 
 % sensor outputs.
+% 
+% Citation: Yang Liu, Gregory W. Wornell, William T. Freeman, Fredo Durand.
+% Imaging Privacy Threats from an Ambient Light Sensor. preprint
+% [submitted]. 2023.
 clear; clc;
 close all;
 % [0] environment configuration

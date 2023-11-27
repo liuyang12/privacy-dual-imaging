@@ -1,6 +1,10 @@
 %FIG02_RECON_PROCEDURE_TOUCH 
 % Figure 2 | Inversion procedure for revealing imaging privacy threats from
 % an ambient light sensor.
+% 
+% Citation: Yang Liu, Gregory W. Wornell, William T. Freeman, Fredo Durand.
+% Imaging Privacy Threats from an Ambient Light Sensor. preprint
+% [submitted]. 2023.
 clear; clc;
 close all;
 % [0] environment configuration

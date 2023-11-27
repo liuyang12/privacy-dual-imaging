@@ -1,6 +1,10 @@
 %FIG04_TOUCH_GESTURE_SEQUENCE 
 % Figure 4 | Eavesdropping touch gestures from the ambient light sensor of 
 % a 17.3-inch tablet.
+% 
+% Citation: Yang Liu, Gregory W. Wornell, William T. Freeman, Fredo Durand.
+% Imaging Privacy Threats from an Ambient Light Sensor. preprint
+% [submitted]. 2023.
 clear; clc;
 close all;
 % [0] environment configuration
