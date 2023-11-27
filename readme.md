@@ -1,6 +1,6 @@
 # Privacy Dual Imaging (PDI)
 This repository contains the MATLAB code for the paper **Imaging Privacy Threats from an Ambient Light Sensor** (***preprint [submitted]*** 2023) by [Yang Liu](https://yangliu.mit.edu/), [Gregory W. Wornell](http://allegro.mit.edu/~gww/), [William T. Freeman](https://billf.mit.edu/), [Fredo Durand](https://people.csail.mit.edu/fredo/).
-[[project]](https://yangliu.mit.edu/publication/privacy_dual_imaging/ "project page")   [[github]](https://github.com/liuyang12/DeSCI "github repository")
+[[project]](https://yangliu.mit.edu/publication/privacy_dual_imaging/ "project page")   [[github]](https://github.com/liuyang12/privacy-dual-imaging "github repository")
 
 
 ## Usage
